@@ -121,39 +121,26 @@ const HERO_POOL = [
 let rooms = {};
 
 io.on("connection", (socket) => {
-  socket.on("join_game", ({ name, room }) => {
-  if (!rooms[room]) rooms[room] = createRoom(room);
-  const player = createPlayer(socket.id, name);
-  rooms[room].players.push(player);
-  socket.join(room);
+  socket.on("disconnect", () => {
+    const room = getRoomBySocket(socket.id);
+    if (!room) return;
 
-  console.log(`👤 ${name} เข้าห้อง ${room}`);
-  io.to(room).emit("log", `${name} เข้าห้อง`);
+    const idx = room.players.findIndex(p => p.id === socket.id);
+    if (idx !== -1) {
+      const name = room.players[idx].name;
+      room.players.splice(idx, 1);
+      io.to(room.id).emit("log", `${name} ออกจากห้องแล้ว`);
+      console.log(`[ROOM ${room.id}] ${name} ออกจากห้อง`);
+    }
 
-  io.to(room).emit("players_update", rooms[room].players);
-
-  if (rooms[room].players.length >= 4 && !rooms[room].started) {
-    startGame(rooms[room]);
-  }
-});
-
-socket.on("disconnect", () => {
-  const room = getRoomBySocket(socket.id);
-  if (!room) return;
-
-  const playerIndex = room.players.findIndex(p => p.id === socket.id);
-  if (playerIndex !== -1) {
-    const playerName = room.players[playerIndex].name;
-    console.log(`❌ ${playerName} ออกจากห้อง ${room.id}`);
-    io.to(room.id).emit("log", `${playerName} ออกจากห้อง`);
-    room.players.splice(playerIndex, 1);
     io.to(room.id).emit("players_update", room.players);
-  }
-});
-
+  });
   console.log("เชื่อมต่อแล้ว:", socket.id);
 
   socket.on("join_game", ({ name, room }) => {
+  io.to(room).emit("log", `${name} เข้าห้องแล้ว`);
+  console.log(`[ROOM ${room}] ${name} เข้าห้อง`);
+
     if (!rooms[room]) rooms[room] = createRoom(room);
     const player = createPlayer(socket.id, name);
     rooms[room].players.push(player);
@@ -373,6 +360,11 @@ socket.on("disconnect", () => {
   }
   
   function startGame(room) {
+  io.to(room.id).emit("log", "เริ่มเกมแล้ว!");
+  console.log(`[ROOM ${room.id}] เริ่มเกมแล้ว`);
+
+    io.to(room.id).emit("log", "เริ่มเกมแล้ว!");
+    console.log(`🚀 เริ่มเกมในห้อง ${room.id}`);
     room.started = true;
     const count = room.players.length;
     const roles = getRolesByCount(count);
@@ -391,8 +383,6 @@ socket.on("disconnect", () => {
     });
   
     io.to(room.id).emit("start_game", { emperor: room.emperor });
-    io.to(room.id).emit("log", "เริ่มเกมแล้ว!");
-
     nextTurn(room);
   }
   
