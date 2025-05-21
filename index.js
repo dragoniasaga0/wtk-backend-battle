@@ -135,6 +135,20 @@ io.on("connection", (socket) => {
 
     io.to(room.id).emit("players_update", room.players);
   });
+  socket.on("disconnect", () => {
+    const room = getRoomBySocket(socket.id);
+    if (!room) return;
+
+    const idx = room.players.findIndex(p => p.id === socket.id);
+    if (idx !== -1) {
+      const name = room.players[idx].name;
+      room.players.splice(idx, 1);
+      io.to(room.id).emit("log", `${name} ออกจากห้องแล้ว`);
+      console.log(`[ROOM ${room.id}] ${name} ออกจากห้อง`);
+    }
+
+    io.to(room.id).emit("players_update", room.players);
+  });
   console.log("เชื่อมต่อแล้ว:", socket.id);
 
   socket.on("join_game", ({ name, room }) => {
