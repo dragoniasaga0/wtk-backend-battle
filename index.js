@@ -1045,3 +1045,15 @@ server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 
+
+socket.on("disconnect", () => {
+    for (const [roomId, room] of Object.entries(rooms)) {
+        const idx = room.players.findIndex(p => p.id === socket.id);
+        if (idx !== -1) {
+            const player = room.players[idx];
+            room.players.splice(idx, 1);
+            console.log(`${player.name} left room ${roomId}`);
+            break;
+        }
+    }
+});
