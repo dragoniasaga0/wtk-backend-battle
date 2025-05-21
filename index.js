@@ -391,6 +391,8 @@ socket.on("disconnect", () => {
     });
   
     io.to(room.id).emit("start_game", { emperor: room.emperor });
+    io.to(room.id).emit("log", "เริ่มเกมแล้ว!");
+
     nextTurn(room);
   }
   
