@@ -121,6 +121,36 @@ const HERO_POOL = [
 let rooms = {};
 
 io.on("connection", (socket) => {
+  socket.on("join_game", ({ name, room }) => {
+  if (!rooms[room]) rooms[room] = createRoom(room);
+  const player = createPlayer(socket.id, name);
+  rooms[room].players.push(player);
+  socket.join(room);
+
+  console.log(`👤 ${name} เข้าห้อง ${room}`);
+  io.to(room).emit("log", `${name} เข้าห้อง`);
+
+  io.to(room).emit("players_update", rooms[room].players);
+
+  if (rooms[room].players.length >= 4 && !rooms[room].started) {
+    startGame(rooms[room]);
+  }
+});
+
+socket.on("disconnect", () => {
+  const room = getRoomBySocket(socket.id);
+  if (!room) return;
+
+  const playerIndex = room.players.findIndex(p => p.id === socket.id);
+  if (playerIndex !== -1) {
+    const playerName = room.players[playerIndex].name;
+    console.log(`❌ ${playerName} ออกจากห้อง ${room.id}`);
+    io.to(room.id).emit("log", `${playerName} ออกจากห้อง`);
+    room.players.splice(playerIndex, 1);
+    io.to(room.id).emit("players_update", room.players);
+  }
+});
+
   console.log("เชื่อมต่อแล้ว:", socket.id);
 
   socket.on("join_game", ({ name, room }) => {
